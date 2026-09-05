@@ -1,0 +1,160 @@
+name: Deployment Verification
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Daily: upstream repushes tags, and a relay whose image moved under it is
+    # exactly the failure this repository is about.
+    - cron: "23 6 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: deployment-verification-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint shell scripts and workflow YAML
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: ShellCheck
+        run: |
+          docker run --rm -v "$PWD:/mnt" -w /mnt \
+            koalaman/shellcheck-alpine:stable \
+            shellcheck ./tests/*.sh
+
+      - name: actionlint
+        run: docker run --rm -v "$PWD:/mnt" -w /mnt rhysd/actionlint:1.7.12 -color
+
+      - name: The local door must never be published to every interface
+        run: |
+          # The single value this template exists to protect. A commit that
+          # binds the game port to 0.0.0.0 undoes the whole design quietly.
+          if grep -nE '^\s*-\s*"0\.0\.0\.0:' ./*.yml; then
+            echo "::error::a port is published on 0.0.0.0, which exposes the game to every interface"
+            exit 1
+          fi
+          grep -q 'LAN_BIND_ADDRESS:?' ./*.yml || {
+            echo "::error::LAN_BIND_ADDRESS lost its :? guard, so a missing value would bind everywhere"
+            exit 1
+          }
+          echo "The local door is bound to one address and the guard is in place."
+
+  scan-trivy:
+    name: Scan pinned upstream image with Trivy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: wireguard
+            env_var: WIREGUARD_IMAGE_TAG
+          - name: game
+            env_var: GAME_IMAGE_TAG
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Read the pinned ${{ matrix.name }} image from the compose file
+        id: pin
+        env:
+          ENV_VAR: ${{ matrix.env_var }}
+        run: |
+          image="$(grep -m1 -oE "\\\$\\{${ENV_VAR}:-.*" game-server-wireguard-relay-docker-compose.yml | sed -E -e ':a' -e 's/\$\{[A-Z0-9_]+:-([^{}]*)\}/\1/' -e 'ta')"
+          if [ -z "$image" ]; then
+            echo "${ENV_VAR} default not found in the compose x-images block" >&2
+            exit 1
+          fi
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+
+      - name: Trivy scan of ${{ matrix.name }}
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ steps.pin.outputs.image }}
+          format: sarif
+          output: trivy-${{ matrix.name }}.sarif
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+
+      - name: Upload Trivy SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
+        with:
+          sarif_file: trivy-${{ matrix.name }}.sarif
+          category: trivy-${{ matrix.name }}
+
+  isolation:
+    name: The game cannot be reached around its relay
+    runs-on: ubuntu-latest
+    needs: lint
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Load the WireGuard kernel module if the runner has it
+        run: sudo modprobe wireguard || echo "no kernel module, the image falls back to wireguard-go"
+
+      - name: Run the relay isolation tests
+        run: ./tests/e2e-relay-isolation.sh
+
+      - name: Show container logs on failure
+        if: failure()
+        run: |
+          for c in relay-test-vps relay-test-wg relay-test-probe; do
+            echo "--- $c"; docker logs "$c" 2>&1 | tail -30 || true
+          done
+
+  check-pin-freshness:
+    name: Check pinned images for upstream drift
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Compare pinned digests against what each tag resolves to now
+        run: |
+          status=0
+          for var in WIREGUARD_IMAGE_TAG GAME_IMAGE_TAG; do
+            pin="$(grep -m1 -oE "\\\$\\{${var}:-.*" game-server-wireguard-relay-docker-compose.yml | sed -E -e ':a' -e 's/\$\{[A-Z0-9_]+:-([^{}]*)\}/\1/' -e 'ta')"
+            ref="${pin%%@*}"
+            pinned_digest="${pin##*@}"
+            # Three attempts: an unanswered registry lookup used to leave this
+            # empty, and the comparison below then reported it as drift.
+            current_digest=""
+            for attempt in 1 2 3; do
+              current_digest="$(docker buildx imagetools inspect "$ref" --format '{{json .Manifest}}' 2>/dev/null | jq -r '.digest // empty')"
+              [ -n "$current_digest" ] && break
+              sleep $(( attempt * 5 ))
+            done
+            if [ -z "$current_digest" ]; then
+              echo "::error::${ref} did not resolve after three attempts: the registry did not answer, or the tag is gone. The pin itself is unchanged."
+              status=1
+              continue
+            fi
+            if [ "$pinned_digest" != "$current_digest" ]; then
+              echo "::error::${var} digest drift: pinned ${pinned_digest}, but ${ref} now resolves to ${current_digest}"
+              status=1
+            else
+              echo "${var} OK (${ref})"
+            fi
+          done
+          exit "$status"

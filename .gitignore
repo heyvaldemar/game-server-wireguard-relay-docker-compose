@@ -1,0 +1,3 @@
+# The tunnel private key lives here.
+config/
+.env
