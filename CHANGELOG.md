@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 _(no unreleased changes yet)_
 
+## [1.1.0] - 2026-09-06
+
+### Added
+
+- **CI now reads the compose file this repository actually ships.** The
+  isolation suite builds a miniature out of plain `docker run`, which proves
+  the pattern and never touches the shipped file — so the compose could have
+  stopped parsing entirely and every run would still have been green. The
+  stack cannot be started on a runner, because the sidecar needs a peer on a
+  relay that is not there, but the file can be resolved and read: it parses
+  with the shipped defaults, the game still has `network_mode:
+  service:relay-wg` and therefore no network of its own, every published port
+  carries a `host_ip` that is the LAN address rather than every interface, and
+  swap is still off on the game container.
+- The port check reads the resolved structure rather than grepping near it.
+  Compose writes the binding as a `host_ip` key several lines from
+  `published`, so a proximity grep answers about the wrong thing — and an
+  absent `host_ip`, which is exactly what publishing on every interface looks
+  like once resolved, would have passed it.
+
 ## [1.0.0] - 2026-09-04
 
 ### Added
@@ -33,5 +53,6 @@ _(no unreleased changes yet)_
   inside and outside, on host networking hanging Source engine servers, and on
   why every container has a memory ceiling.
 
-[Unreleased]: https://github.com/heyvaldemar/game-server-wireguard-relay-docker-compose/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/heyvaldemar/game-server-wireguard-relay-docker-compose/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/heyvaldemar/game-server-wireguard-relay-docker-compose/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/heyvaldemar/game-server-wireguard-relay-docker-compose/releases/tag/v1.0.0

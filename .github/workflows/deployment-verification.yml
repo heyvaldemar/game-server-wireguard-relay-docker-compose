@@ -97,6 +97,77 @@ jobs:
           sarif_file: trivy-${{ matrix.name }}.sarif
           category: trivy-${{ matrix.name }}
 
+  compose:
+    name: The shipped compose file parses and keeps its promises
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Resolve the compose file with the shipped defaults
+        # The isolation suite builds a miniature out of plain `docker run`, so
+        # it proves the pattern and never touches this file. Nothing did: the
+        # compose file could stop parsing entirely and CI would stay green.
+        #
+        # The stack cannot be started here - the sidecar needs a peer on a
+        # relay that does not exist on a runner, and the game waits for its
+        # handshake. What can be checked is that the file resolves at all,
+        # that every variable it needs is declared, and that the properties
+        # this repository argues for survive in the resolved output.
+        run: |
+          cp .env.example .env
+          sed -i 's/^LAN_BIND_ADDRESS=.*/LAN_BIND_ADDRESS=192.0.2.10/' .env
+          docker compose -f game-server-wireguard-relay-docker-compose.yml config > /tmp/resolved.yml
+          echo "compose resolved:"
+          head -5 /tmp/resolved.yml
+
+      - name: The game has no network of its own
+        # The whole design rests on this line. If it is ever dropped the game
+        # gets a bridge address, publishes its own ports, and the home address
+        # this exists to hide is on the internet.
+        run: |
+          grep -q 'network_mode: service:relay-wg' /tmp/resolved.yml \
+            || { echo "::error::the game no longer shares the sidecar's network namespace"; exit 1; }
+          echo "game runs inside the sidecar's namespace"
+
+      - name: The local door is bound to one address, never 0.0.0.0
+        # Read the resolved structure rather than grepping around it: compose
+        # writes the binding as a `host_ip` key several lines away from
+        # `published`, so a proximity grep answers about the wrong thing. An
+        # ABSENT host_ip is the failure - that is what publishing on every
+        # interface looks like once resolved.
+        run: |
+          python3 - <<'EOF'
+          import yaml, sys
+          d = yaml.safe_load(open('/tmp/resolved.yml'))
+          bad = []
+          for name, svc in d.get('services', {}).items():
+              for p in svc.get('ports', []) or []:
+                  ip = p.get('host_ip')
+                  if not ip or ip in ('0.0.0.0', '::'):
+                      bad.append(f"{name}: {p.get('published')} bound to {ip or 'every interface'}")
+                  elif ip != '192.0.2.10':
+                      bad.append(f"{name}: {p.get('published')} bound to {ip}, not LAN_BIND_ADDRESS")
+          if bad:
+              print("::error::" + "; ".join(bad)); sys.exit(1)
+          print("every published port is bound to LAN_BIND_ADDRESS")
+          EOF
+
+      - name: Swap is off where it would be felt
+        # A game server that swaps is one every player notices, so
+        # memswap_limit equals mem_limit on the game container.
+        run: |
+          python3 - <<'EOF'
+          import yaml
+          d = yaml.safe_load(open('/tmp/resolved.yml'))
+          g = d['services']['game']
+          mem, swap = g.get('mem_limit'), g.get('memswap_limit')
+          assert mem and swap and mem == swap, f"memswap_limit {swap} does not equal mem_limit {mem}"
+          print(f"swap disabled on the game container (both {mem})")
+          EOF
+
   isolation:
     name: The game cannot be reached around its relay
     runs-on: ubuntu-latest
