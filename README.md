@@ -61,6 +61,10 @@ Five things, each of which cost an evening.
 - [ ] **Watch the handshake, not the interface.** An interface with no handshake looks identical to a working one. The healthcheck here fails when the last handshake is older than five minutes.
 - [ ] **Open the game port in the relay provider's firewall**, and only that port.
 
+## Updating
+
+`./update.sh` moves this checkout to the latest release tag — a combination this repository's CI has booted, upgraded from the previous release on the same volumes, and smoke-tested — and then runs `docker compose up -d`. It refuses to cross a major version unattended, refuses to run over local changes, and names any variable that became required since your version before anything has moved. `./update.sh --dry-run` says what would happen. Every release cut by fleet triage also carries what upstream changed, read from its release notes against this compose file.
+
 ## Testing
 
 `tests/e2e-relay-isolation.sh` builds a miniature of this on one machine: a WireGuard server, a client sidecar, and a probe in the sidecar's namespace. It asserts that the game container carries no network of its own, that its packets leave with the tunnel address, that the local door answers on one address only, and that the server stops answering when the relay goes down. No cloud account and no game download.
