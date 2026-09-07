@@ -9,15 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 _(no unreleased changes yet)_
 
-## [1.1.0] - 2026-09-06
+## [1.2.0] - 2026-09-07
 
 ### Added
 
-- **CI now reads the compose file this repository actually ships.** The
-  isolation suite builds a miniature out of plain `docker run`, which proves
-  the pattern and never touches the shipped file — so the compose could have
-  stopped parsing entirely and every run would still have been green. The
-  stack cannot be started on a runner, because the sidecar needs a peer on a
+- **`update.sh`: move between release tags on purpose.** It updates to the latest release (a combination this repository's CI has booted and smoke-tested), refuses to cross a major version unattended, refuses to run over local changes, and names any new required variable before anything has moved. `--dry-run` says what would happen.
+
+not be started on a runner, because the sidecar needs a peer on a
   relay that is not there, but the file can be resolved and read: it parses
   with the shipped defaults, the game still has `network_mode:
   service:relay-wg` and therefore no network of its own, every published port
@@ -53,6 +51,7 @@ _(no unreleased changes yet)_
   inside and outside, on host networking hanging Source engine servers, and on
   why every container has a memory ceiling.
 
-[Unreleased]: https://github.com/heyvaldemar/game-server-wireguard-relay-docker-compose/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/heyvaldemar/game-server-wireguard-relay-docker-compose/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/heyvaldemar/game-server-wireguard-relay-docker-compose/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/heyvaldemar/game-server-wireguard-relay-docker-compose/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/heyvaldemar/game-server-wireguard-relay-docker-compose/releases/tag/v1.0.0
