@@ -9,6 +9,11 @@
 #   ./update.sh              update to the latest release
 #   ./update.sh --dry-run    say what would happen
 #   ./update.sh --allow-major   cross a major version, after reading its notes
+#
+# It does not stop at `up -d`. That command returns 0 over a sidecar carrying no
+# tunnel, and the game server here has no network of its own, so a silently dead
+# tunnel is a server nobody can reach. The update is not finished until
+# verify-tunnel.sh says packets are moving.
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -90,3 +95,29 @@ fi
 git checkout -q "$latest"
 docker compose -f "$COMPOSE_FILE" -p "$PROJECT" up -d --remove-orphans
 echo "now on $latest"
+
+# AND THAT EXIT CODE PROVES NOTHING ABOUT THE TUNNEL. Recreating this sidecar is
+# not like recreating an application: the game has no interface of its own, so
+# the sidecar IS the network, and it can come back as a running, healthy looking
+# container carrying no tunnel at all. A key the relay no longer knows, a
+# configuration the new image reads differently, a peer that never answers:
+# `up -d` returns 0 over every one of them, and the server is then unreachable
+# from the internet with nothing anywhere saying so.
+echo "waiting for the tunnel to come back"
+for _ in $(seq 30); do
+  sleep 4
+  if ./verify-tunnel.sh > /dev/null 2>&1; then
+    ./verify-tunnel.sh
+    echo "the tunnel is carrying traffic on $latest"
+    exit 0
+  fi
+done
+echo >&2
+echo "THE TUNNEL DID NOT COME BACK on $latest. The containers are up." >&2
+./verify-tunnel.sh >&2 || true
+echo >&2
+# Named here because somebody who has just lost their server should not have to
+# go and look up what they were running an hour ago.
+echo "to go back to what was running before:" >&2
+echo "  git checkout $current && docker compose -f $COMPOSE_FILE -p $PROJECT up -d" >&2
+exit 1

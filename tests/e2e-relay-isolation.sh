@@ -17,6 +17,7 @@ PROBE=relay-test-probe
 WG_IMAGE="${WIREGUARD_IMAGE_TAG:-linuxserver/wireguard:1.0.20260223-r0-ls121@sha256:bf03578ef7318ccc7675b4a82beac4d35cd0da2253194f6b6ecf61656b40f0ee}"
 BUSY="${BUSYBOX_IMAGE_TAG:-busybox:1.37@sha256:9db7b59979c38555a39def84a31fb98b5296952f9e3afd4f6f11f05b07adfab0}"
 WORK="$(mktemp -d)"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 pass=0; fail=0
 ok()   { echo "  PASS: $1"; pass=$((pass + 1)); }
@@ -145,6 +146,30 @@ case "$bound" in
   "") bad "no published port found" ;;
   *) ok "the door is bound to one address only ($bound)" ;;
 esac
+
+echo
+echo "=== a sidecar that is running with a dead tunnel is reported as broken"
+# The failure this exists to catch: docker compose up -d returns 0, the
+# container runs, every check of "is the process alive" says yes, and no traffic
+# is moving. Taking the relay away reproduces it exactly. HANDSHAKE_MAX is ten
+# seconds here rather than the shipped three minutes, so the test finishes; the
+# mechanism under test is the same one either way.
+docker stop "$VPS" > /dev/null 2>&1
+note "the relay is gone; waiting for the handshake to go stale"
+sleep 12
+running=$(docker inspect "$SIDECAR" --format '{{ .State.Running }}' 2>/dev/null)
+if [ "$running" = "true" ]; then
+  ok "the sidecar is still running, so nothing watching the process would notice"
+else
+  bad "the sidecar stopped by itself, so this proves nothing"
+fi
+if HANDSHAKE_MAX=10 WG_CONTAINER="$SIDECAR" SKIP_GAME_PORT=true \
+     "$REPO_ROOT/verify-tunnel.sh" > "$WORK/verify.out" 2>&1; then
+  bad "verify-tunnel.sh called a dead tunnel healthy"
+  sed 's/^/    /' "$WORK/verify.out"
+else
+  ok "verify-tunnel.sh refused: $(tail -1 "$WORK/verify.out")"
+fi
 
 echo
 echo "=== with the relay gone, the server is unreachable rather than exposed"

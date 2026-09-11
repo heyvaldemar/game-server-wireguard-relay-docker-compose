@@ -9,6 +9,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 _(no unreleased changes yet)_
 
+## [1.3.0] - 2026-09-11
+
+### Added
+
+- **`verify-tunnel.sh`, and an update that will not call itself finished
+  without it.** `docker compose up -d` returning 0 says a request was accepted.
+  It says nothing about whether the tunnel carries traffic, and this sidecar is
+  the game's only network: it can come back as a running, healthy looking
+  container with no tunnel at all. A key the relay no longer knows, a
+  configuration the new image reads differently, a peer that never answers.
+  On one host, eight `PostUp` lines sitting in the wrong block of a `wg0.conf`
+  produced exactly that, the zero exit code hid it, and it stayed hidden for
+  thirteen days with the server unreachable from the internet the whole time.
+
+  The script reads state in the order a packet needs it. The container is
+  running, judged by its state and never by an exit code. `wg0` carries an
+  address, so the interface was configured rather than read and rejected. The
+  peer handshaked inside `HANDSHAKE_MAX`, three minutes by default, which
+  `PersistentKeepalive` at 25 seconds makes generous. And the game port answers
+  on the relay's public address, because everything above can pass while the
+  relay is simply not forwarding it, which is a firewall rule on somebody else's
+  machine and the single most common thing left undone.
+
+  A UDP game is reported as untested rather than passed: an open UDP port and a
+  dropped one look the same from here, and a check that cannot fail is worse
+  than no check.
+
+  `update.sh` now waits for it after `up -d`, and on failure prints the exact
+  command that puts the previous release back, because somebody who has just
+  lost their server should not have to go and look up what they were running an
+  hour ago.
+
+- A scenario in the isolation suite for the case this is all about: with the
+  relay taken away, the sidecar is still running and still looks fine to
+  anything watching the process, and `verify-tunnel.sh` refuses it.
+
 ## [1.2.2] - 2026-09-10
 
 ### Security
@@ -63,7 +99,8 @@ not be started on a runner, because the sidecar needs a peer on a
   inside and outside, on host networking hanging Source engine servers, and on
   why every container has a memory ceiling.
 
-[Unreleased]: https://github.com/heyvaldemar/game-server-wireguard-relay-docker-compose/compare/v1.2.2...HEAD
+[Unreleased]: https://github.com/heyvaldemar/game-server-wireguard-relay-docker-compose/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/heyvaldemar/game-server-wireguard-relay-docker-compose/releases/tag/v1.3.0
 [1.2.2]: https://github.com/heyvaldemar/game-server-wireguard-relay-docker-compose/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/heyvaldemar/game-server-wireguard-relay-docker-compose/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/heyvaldemar/game-server-wireguard-relay-docker-compose/compare/v1.1.0...v1.2.0

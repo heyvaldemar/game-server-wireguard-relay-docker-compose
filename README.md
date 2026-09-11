@@ -65,9 +65,19 @@ Five things, each of which cost an evening.
 
 `./update.sh` moves this checkout to the latest release tag — a combination this repository's CI has booted, upgraded from the previous release on the same volumes, and smoke-tested — and then runs `docker compose up -d`. It refuses to cross a major version unattended, refuses to run over local changes, and names any variable that became required since your version before anything has moved. `./update.sh --dry-run` says what would happen. Every release cut by fleet triage also carries what upstream changed, read from its release notes against this compose file.
 
+It does not stop there, because `up -d` returning 0 says nothing about the tunnel. This sidecar is the game's only network, and it can come back as a running, healthy looking container carrying no tunnel at all: a key the relay no longer knows, a configuration the new image reads differently, a peer that never answers. On one host, eight `PostUp` lines sitting in the wrong block of a `wg0.conf` did exactly that. The zero exit code hid it and it stayed hidden for thirteen days, with the server unreachable the whole time. So the update waits for `verify-tunnel.sh` to say packets are moving, and if they are not it says so loudly and prints the command that puts the previous release back.
+
+Run the same check any time:
+
+```bash
+./verify-tunnel.sh
+```
+
+It reads state, in the order a packet needs it: the container is running, judged by its state and never by an exit code; `wg0` carries an address, so the interface was configured rather than rejected; the peer handshaked inside the last three minutes, which `PersistentKeepalive` at 25 seconds makes a generous window; and the game port answers on the relay's public address, because everything above can pass while the relay is simply not forwarding it.
+
 ## Testing
 
-`tests/e2e-relay-isolation.sh` builds a miniature of this on one machine: a WireGuard server, a client sidecar, and a probe in the sidecar's namespace. It asserts that the game container carries no network of its own, that its packets leave with the tunnel address, that the local door answers on one address only, and that the server stops answering when the relay goes down. No cloud account and no game download.
+`tests/e2e-relay-isolation.sh` builds a miniature of this on one machine: a WireGuard server, a client sidecar, and a probe in the sidecar's namespace. It asserts that the game container carries no network of its own, that its packets leave with the tunnel address, that the local door answers on one address only, that the server stops answering when the relay goes down, and that a sidecar still running with a dead tunnel is reported as broken rather than healthy. No cloud account and no game download.
 
 The [Deployment Verification](https://github.com/heyvaldemar/game-server-wireguard-relay-docker-compose/actions/workflows/deployment-verification.yml?query=branch%3Amain) workflow runs it on every push, pull request, and daily, alongside shell and workflow linting and a Trivy scan of the pinned images.
 
