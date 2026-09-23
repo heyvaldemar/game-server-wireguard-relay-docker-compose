@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+_(no unreleased changes yet)_
+
+## [1.3.5] - 2026-09-23
+
 ### Changed
 
 - **The freshness check has its own workflow, Pin Freshness.** It ran inside Deployment Verification, whose badge is the one at the top of this README. Across the fleet, nine red runs in ten were a pin one version behind - which the fleet's triage moves within the day - and a reader cannot tell that from a stack that does not boot. The badge now says whether the stack boots. The job itself is unchanged.
@@ -129,7 +133,8 @@ not be started on a runner, because the sidecar needs a peer on a
   inside and outside, on host networking hanging Source engine servers, and on
   why every container has a memory ceiling.
 
-[Unreleased]: https://github.com/heyvaldemar/game-server-wireguard-relay-docker-compose/compare/v1.3.4...HEAD
+[Unreleased]: https://github.com/heyvaldemar/game-server-wireguard-relay-docker-compose/compare/v1.3.5...HEAD
+[1.3.5]: https://github.com/heyvaldemar/game-server-wireguard-relay-docker-compose/compare/v1.3.4...v1.3.5
 [1.3.4]: https://github.com/heyvaldemar/game-server-wireguard-relay-docker-compose/compare/v1.3.3...v1.3.4
 [1.3.3]: https://github.com/heyvaldemar/game-server-wireguard-relay-docker-compose/compare/v1.3.2...v1.3.3
 [1.3.2]: https://github.com/heyvaldemar/game-server-wireguard-relay-docker-compose/compare/v1.3.1...v1.3.2
