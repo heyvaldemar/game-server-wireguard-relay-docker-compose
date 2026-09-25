@@ -1,6 +1,7 @@
 # Game server behind a WireGuard relay
 
 [![Deployment Verification](https://github.com/heyvaldemar/game-server-wireguard-relay-docker-compose/actions/workflows/deployment-verification.yml/badge.svg?branch=main)](https://github.com/heyvaldemar/game-server-wireguard-relay-docker-compose/actions/workflows/deployment-verification.yml)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/14845/badge)](https://www.bestpractices.dev/projects/14845)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Run a game server at home and let friends connect to it, without your home IP address appearing in a server list, a query response, or a traceroute.
