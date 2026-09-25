@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+_(no unreleased changes yet)_
+
+## [1.3.6] - 2026-09-25
+
 ### Security
 
 - **`itzg/minecraft-server:java25` was rebuilt upstream**; the pin moved from `sha256:c8ace6eaf0e9…` to `sha256:8d0500eb1df7…`. Same version, same tag, a rebuilt base image — the usual shape of a security fix in a base layer.
@@ -135,7 +139,8 @@ not be started on a runner, because the sidecar needs a peer on a
   inside and outside, on host networking hanging Source engine servers, and on
   why every container has a memory ceiling.
 
-[Unreleased]: https://github.com/heyvaldemar/game-server-wireguard-relay-docker-compose/compare/v1.3.5...HEAD
+[Unreleased]: https://github.com/heyvaldemar/game-server-wireguard-relay-docker-compose/compare/v1.3.6...HEAD
+[1.3.6]: https://github.com/heyvaldemar/game-server-wireguard-relay-docker-compose/compare/v1.3.5...v1.3.6
 [1.3.5]: https://github.com/heyvaldemar/game-server-wireguard-relay-docker-compose/compare/v1.3.4...v1.3.5
 [1.3.4]: https://github.com/heyvaldemar/game-server-wireguard-relay-docker-compose/compare/v1.3.3...v1.3.4
 [1.3.3]: https://github.com/heyvaldemar/game-server-wireguard-relay-docker-compose/compare/v1.3.2...v1.3.3
