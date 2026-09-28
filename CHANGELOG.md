@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_(no unreleased changes yet)_
+### Security
+
+- **`itzg/minecraft-server:java25` was rebuilt upstream**; the pin moved from `sha256:8d0500eb1df7…` to `sha256:783d2712019a…`. Same version, same tag, a rebuilt base image — the usual shape of a security fix in a base layer.
 
 ## [1.3.6] - 2026-09-25
 
