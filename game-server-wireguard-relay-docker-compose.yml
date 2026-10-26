@@ -20,7 +20,7 @@
 
 x-images:
   wireguard: &wireguard-image ${WIREGUARD_IMAGE_TAG:-linuxserver/wireguard:${WIREGUARD_IMAGE_VERSION:-1.0.20260223-r0-ls121@sha256:bf03578ef7318ccc7675b4a82beac4d35cd0da2253194f6b6ecf61656b40f0ee}}
-  game: &game-image ${GAME_IMAGE_TAG:-itzg/minecraft-server:${GAME_IMAGE_VERSION:-java25@sha256:bbc3f4d06517d38dc295cce6742679bf0b9edbb016f6fe47e0a7669378d1f9dc}}
+  game: &game-image ${GAME_IMAGE_TAG:-itzg/minecraft-server:${GAME_IMAGE_VERSION:-java25@sha256:0501cb2609925a658432eb31b4a64452c3f37761893f5873ec60df80c91e434e}}
 
 services:
   relay-wg:
