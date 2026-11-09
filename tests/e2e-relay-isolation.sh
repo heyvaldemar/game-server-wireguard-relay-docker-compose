@@ -50,11 +50,11 @@ VPS_IP="${SUBNET}.10"
 note "test network on ${SUBNET}.0/24"
 
 # --- the VPS side: a WireGuard server that hands out one peer -----------------
-if ! docker run -d --name "$VPS" --network "$NET" --ip "$VPS_IP" \
+if ! SERVERURL="$VPS_IP" PEERDNS="$VPS_IP" docker run -d --name "$VPS" --network "$NET" --ip "$VPS_IP" \
   --cap-add NET_ADMIN --cap-add SYS_MODULE \
   -e PUID=1000 -e PGID=1000 -e TZ=Etc/UTC \
-  -e SERVERURL="$VPS_IP" -e SERVERPORT=51820 -e PEERS=1 \
-  -e PEERDNS="$VPS_IP" -e INTERNAL_SUBNET=10.13.13.0 -e ALLOWEDIPS=10.13.13.0/24 \
+  -e SERVERURL -e SERVERPORT=51820 -e PEERS=1 \
+  -e PEERDNS -e INTERNAL_SUBNET=10.13.13.0 -e ALLOWEDIPS=10.13.13.0/24 \
   -v /lib/modules:/lib/modules:ro "$WG_IMAGE" > /dev/null; then
   bad "the relay container did not start"
   echo; echo "Passed: $pass  Failed: $fail"; exit 1

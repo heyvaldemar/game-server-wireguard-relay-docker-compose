@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_(no unreleased changes yet)_
+### Changed
+
+- **The relay isolation test hands `SERVERURL` and `PEERDNS` to the stand-in VPS by name.** Neither is a secret, but fleet conformance now flags any value expanded into `-e NAME=`. Test only.
 
 ## [1.3.32] - 2026-11-06
 
