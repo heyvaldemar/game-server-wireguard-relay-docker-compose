@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **`itzg/minecraft-server:java25` was rebuilt upstream**; the pin moved from `sha256:4f855c470f6b…` to `sha256:d3415f085e10…`. Same version, same tag, a rebuilt base image — the usual shape of a security fix in a base layer.
+
 ### Changed
 
 - **The relay isolation test hands `SERVERURL` and `PEERDNS` to the stand-in VPS by name.** Neither is a secret, but fleet conformance now flags any value expanded into `-e NAME=`. Test only.
