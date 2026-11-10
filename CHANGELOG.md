@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+_(no unreleased changes yet)_
+
+## [1.3.33] - 2026-11-10
+
 ### Fixed
 
 - **An index pushed again over the same build is no longer reported as drift.** The daily pin check compared each pin with the digest the tag's index has now and failed on any difference, so a publisher re-pushing the index over the very same images (a platform added, an attestation rewritten) turned it red for an image nobody rebuilt, and no pin would ever move to turn it green. It now also compares the linux/amd64 build under both digests, the one CI runs and proves: the same build passes with a notice naming both digests, a new build fails as drift exactly as before, and a build that cannot be read still fails.
@@ -310,7 +314,8 @@ not be started on a runner, because the sidecar needs a peer on a
   inside and outside, on host networking hanging Source engine servers, and on
   why every container has a memory ceiling.
 
-[Unreleased]: https://github.com/heyvaldemar/game-server-wireguard-relay-docker-compose/compare/v1.3.32...HEAD
+[Unreleased]: https://github.com/heyvaldemar/game-server-wireguard-relay-docker-compose/compare/v1.3.33...HEAD
+[1.3.33]: https://github.com/heyvaldemar/game-server-wireguard-relay-docker-compose/compare/v1.3.32...v1.3.33
 [1.3.32]: https://github.com/heyvaldemar/game-server-wireguard-relay-docker-compose/compare/v1.3.31...v1.3.32
 [1.3.31]: https://github.com/heyvaldemar/game-server-wireguard-relay-docker-compose/compare/v1.3.30...v1.3.31
 [1.3.30]: https://github.com/heyvaldemar/game-server-wireguard-relay-docker-compose/compare/v1.3.29...v1.3.30
